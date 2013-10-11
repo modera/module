@@ -73,7 +73,7 @@ class ModuleRepository
     public function __construct(ContainerInterface $container, $moduleType = null, $packagistUrl = null, $pathToComposer = null, $workingDir = null)
     {
         $this->container = $container;
-        $this->moduleType = $moduleType ?: 'modera-module';
+        $this->moduleType = $moduleType ?: 'moderamodule';
         $this->packagistUrl = $packagistUrl ?: 'https://packages.modera.org';
         $this->pathToComposer = $pathToComposer;
 
@@ -85,9 +85,13 @@ class ModuleRepository
 
         putenv("COMPOSER_HOME=$workingDir/app/cache/.composer");
 
+        chdir($this->workingDir);
+
         ComposerAdapter::checkComposer($this->pathToComposer);
 
         $this->io = new \Composer\IO\BufferIO();
+
+        chdir($this->defaultWorkingDir);
     }
 
     /**
