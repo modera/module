@@ -1,0 +1,28 @@
+{
+    "name": "modera/module",
+    "type": "library",
+    "description": "Modera module",
+    "keywords": ["module"],
+    "homepage": "http://modera.org",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sergei Vizel",
+            "email": "sergei.vizel@modera.net"
+        }
+    ],
+    "require": {
+        "symfony/console": "2.*",
+        "kriswallsmith/buzz": ">=0.10"
+    },
+
+    "require-dev": {
+    },
+
+    "autoload": {
+        "psr-0" : {
+            "Modera\\Module" : ""
+        }
+    },
+    "target-dir": "Modera/Module"
+}
