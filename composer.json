@@ -13,7 +13,7 @@
     ],
     "require": {
         "symfony/console": "2.*",
-        "kriswallsmith/buzz": ">=0.10"
+        "knplabs/packagist-api": "0.1.*@dev"
     },
 
     "require-dev": {

@@ -2,21 +2,14 @@
 
 namespace Modera\Module\Repository;
 
-use Buzz\Browser;
-use Buzz\Client\Curl;
-use Composer\Factory;
+use Packagist\Api\Client;
+use Packagist\Api\Result\Package;
 use Composer\Composer;
-use Composer\Installer;
-use Composer\Json\JsonFile;
 use Composer\IO\IOInterface;
-use Composer\Plugin\CommandEvent;
-use Composer\Plugin\PluginEvents;
-use Composer\Json\JsonManipulator;
-use Composer\Package\Version\VersionParser;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\NullOutput;
+use Composer\Package\CompletePackage;
+use Composer\Package\PackageInterface;
 use Modera\Module\Adapter\ComposerAdapter;
+use Modera\Module\Service\ComposerService;
 
 /**
  * @copyright 2013 Modera Foundation
@@ -24,11 +17,6 @@ use Modera\Module\Adapter\ComposerAdapter;
  */
 class ModuleRepository
 {
-    /**
-     * @var ContainerInterface
-     */
-    private $container;
-
     /**
      * @var IOInterface
      */
@@ -40,68 +28,49 @@ class ModuleRepository
     private $composer;
 
     /**
-     * @var string
+     * @var Client
      */
-    private $moduleType;
-
-    /**
-     * @var null|string
-     */
-    private $workingDir = null;
-
-    /**
-     * @var null|string
-     */
-    private $defaultWorkingDir = null;
-
-    /**
-     * @var null|string
-     */
-    private $pathToComposer = null;
+    private $packagist;
 
     /**
      * @var string
      */
-    private $packagistUrl;
+    private $workingDir;
 
     /**
-     * @param ContainerInterface $container
-     * @param null $moduleType
-     * @param null $pathToComposer
-     * @param null $workingDir
+     * @var string
      */
-    public function __construct(ContainerInterface $container, $moduleType = null, $packagistUrl = null, $pathToComposer = null, $workingDir = null)
+    private $defaultWorkingDir;
+
+    /**
+     * @var string
+     */
+    private $pathToComposer;
+
+    /**
+     * @var array
+     */
+    private $options = array();
+
+    /**
+     * @param string $workingDir
+     * @param string $pathToComposer
+     */
+    public function __construct($workingDir = null, $pathToComposer = null)
     {
-        $this->container = $container;
-        $this->moduleType = $moduleType ?: 'moderamodule';
-        $this->packagistUrl = $packagistUrl ?: 'https://packages.modera.org';
-        $this->pathToComposer = $pathToComposer;
-
         $this->defaultWorkingDir = getcwd();
-        if (!$workingDir) {
-            $workingDir = dirname($this->container->get('kernel')->getRootdir());
-        }
-        $this->workingDir = $workingDir;
+        $this->workingDir        = $workingDir ?: $this->defaultWorkingDir;
+        $this->pathToComposer    = $pathToComposer;
 
-        putenv("COMPOSER_HOME=$workingDir/app/cache/.composer");
+        putenv("COMPOSER_HOME=" . $this->workingDir . "/app/cache/.composer");
 
         chdir($this->workingDir);
 
         ComposerAdapter::checkComposer($this->pathToComposer);
-
         $this->io = new \Composer\IO\BufferIO();
+        $this->options = ComposerService::getOptions($this->getComposer());
 
         chdir($this->defaultWorkingDir);
-    }
-
-    /**
-     * @return Composer
-     */
-    private function createComposer()
-    {
-        $this->composer = ComposerAdapter::createComposer($this->io);
-
-        return $this->composer;
     }
 
     /**
@@ -110,10 +79,23 @@ class ModuleRepository
     private function getComposer()
     {
         if (!$this->composer) {
-            $this->composer = $this->createComposer();
+            $this->composer = ComposerAdapter::createComposer($this->io);
         }
 
         return $this->composer;
+    }
+
+    /**
+     * @return Client
+     */
+    private function getPackagist()
+    {
+        if (!$this->packagist) {
+            $this->packagist = new Client();
+            $this->packagist->setPackagistUrl($this->options['packagist-url']);
+        }
+
+        return $this->packagist;
     }
 
     /**
@@ -125,235 +107,89 @@ class ModuleRepository
     }
 
     /**
-     * @return array
+     * @param PackageInterface $package
+     * @return string
      */
-    public function getInstalled()
+    public function formatVersion(PackageInterface $package)
     {
-        chdir($this->workingDir);
-
-        $result = array();
-        $installedRepo = $this->getComposer()->getRepositoryManager()->getLocalRepository();
-
-        $packages = array();
-        foreach ($installedRepo->getPackages() as $package) {
-            if (strpos($package->getType(), $this->moduleType) === false) {
-                continue;
-            }
-            if (!isset($packages[$package->getName()])
-                || !is_object($packages[$package->getName()])
-                || version_compare($packages[$package->getName()]->getVersion(), $package->getVersion(), '<')
-            ) {
-                $packages[$package->getName()] = $package;
-            }
-        }
-
-        $versionParser = new VersionParser;
-        foreach ($packages as $key => $package) {
-            list($version, $reference) = array_merge(
-                explode(' ', $versionParser->formatVersion($package)),
-                array(null)
-            );
-            $result[$key] = array(
-                'name'      => $package->getPrettyName(),
-                'version'   => $version,
-                'reference' => $reference,
-            );
-        }
-
-        chdir($this->defaultWorkingDir);
-
-        return array(
-            'results' => $result,
-            'total'   => count($result),
-        );
-    }
-
-    /**
-     * @param int $page
-     * @return array
-     */
-    public function getAvailable($page = 1)
-    {
-        $client = new Curl;
-        $browser = new Browser($client);
-        $response = $browser->get($this->packagistUrl . '/search.json?type=' . $this->moduleType . '&page=' . $page);
-        $data = json_decode($response->getContent(), true);
-
-        return array(
-            'results' => $data['results'],
-            'total'   => $data['total'],
-        );
+        return ComposerService::formatPackageVersion($package);
     }
 
     /**
      * @param $name
-     * @param null $version
-     * @return array|null
+     * @return null|CompletePackage
      */
-    public function getPackageInfo($name, $version = null)
+    public function getInstalledByName($name)
     {
-        $client = new Curl;
-        $browser = new Browser($client);
-        $response = $browser->get($this->packagistUrl . '/p/' . $name . '.json');
-        $info = json_decode($response->getContent(), true);
-        if (isset($info['status']) && $info['status'] == 'error') {
-            return null;
-        }
-        if (!isset($info['packages'][$name])) {
-            return null;
-        }
-        $packages = $info['packages'][$name];
-
-        if ($version && isset($packages[$version])) {
-            $package = $packages[$version];
-        } else {
-            $package = current($packages);
-        }
+        chdir($this->workingDir);
+        $package = ComposerService::getInstalledPackageByName($this->getComposer(), $name);
+        chdir($this->defaultWorkingDir);
 
         return $package;
     }
 
     /**
-     * @param $name
-     * @param string $version
-     * @throws \InvalidArgumentException
+     * @return CompletePackage[]
      */
-    public function install($name, $version = 'dev-master')
+    public function getInstalled()
     {
         chdir($this->workingDir);
-
-        $file = Factory::getComposerFile();
-        $json = new JsonFile($file);
-        $composer = $json->read();
-        $composerBackup = file_get_contents($json->getPath());
-
-        $packages = array($name . ':' . $version);
-
-        $result = array();
-        $requires = $this->normalizeRequirements($packages);
-        foreach ($requires as $key => $requirement) {
-            if (!isset($requirement['version'])) {
-                throw new \InvalidArgumentException('The requirement ' . $requirement['name'] . ' must contain a version constraint');
-            }
-            $result[] = $requirement['name'] . ' ' . $requirement['version'];
-        }
-        $requirements = $result;
-
-        $requireKey = 'require';
-        $baseRequirements = array_key_exists($requireKey, $composer) ? $composer[$requireKey] : array();
-        $requirements = $this->formatRequirements($requirements);
-
-        // validate requirements format
-        $versionParser = new VersionParser();
-        foreach ($requirements as $constraint) {
-            $versionParser->parseConstraints($constraint);
-        }
-
-        if (!$this->updateFileCleanly($json, $baseRequirements, $requirements, $requireKey)) {
-            foreach ($requirements as $package => $version) {
-                $baseRequirements[$package] = $version;
-            }
-
-            $composer[$requireKey] = $baseRequirements;
-            $json->write($composer);
-        }
-
-        // Update packages
-        $composer = $this->createComposer();
-        $composer->getDownloadManager()->setOutputProgress(true);
-
-        $commandEvent = new CommandEvent(PluginEvents::COMMAND, 'require', new ArrayInput(array()), new NullOutput());
-        $composer->getEventDispatcher()->dispatch($commandEvent->getName(), $commandEvent);
-
-        $install = Installer::create($this->io, $composer);
-
-        $install
-            ->setVerbose(false)
-            ->setPreferSource(false)
-            ->setPreferDist(false)
-            ->setDevMode(true)
-            ->setUpdate(true)
-            ->setUpdateWhitelist(array_keys($requirements));
-        ;
-
-        ob_start();
-        if (!$install->run()) {
-            $this->io->write("\n" . '<error>Installation failed, reverting '.$file.' to its original content.</error>');
-            file_put_contents($json->getPath(), $composerBackup);
-        }
-        $res = ob_get_contents();
-        ob_end_clean();
-
-        $this->io->write($res);
-
+        $composer = $this->getComposer();
+        $packages = ComposerService::getInstalledPackages($composer, $this->options['type']);
         chdir($this->defaultWorkingDir);
+
+        return $packages;
     }
 
     /**
-     * @param $name
-     * @param $version
-     */
-    public function uninstall($name, $version)
-    {
-
-    }
-
-    /**
-     * @param $name
-     * @param $version
-     */
-    public function update($name, $version)
-    {
-
-    }
-
-    /**
-     * @param array $requirements
-     * @return \array[]
-     */
-    private function normalizeRequirements(array $requirements)
-    {
-        $parser = new VersionParser();
-
-        return $parser->parseNameVersionPairs($requirements);
-    }
-
-    /**
-     * @param array $requirements
      * @return array
      */
-    private function formatRequirements(array $requirements)
+    public function getAvailable()
     {
-        $requires = array();
-        $requirements = $this->normalizeRequirements($requirements);
-        foreach ($requirements as $requirement) {
-            $requires[$requirement['name']] = $requirement['version'];
-        }
+        $client = $this->getPackagist();
+        $data = $client->all(array('type' => $this->options['type']));
 
-        return $requires;
+        return $data;
     }
 
     /**
-     * @param $json
-     * @param array $base
-     * @param array $new
-     * @param $requireKey
+     * @param $name
+     * @return null|Package
+     */
+    public function getPackage($name)
+    {
+        $client = $this->getPackagist();
+        try {
+            return $client->get($name);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * @param string $name
+     * @param string $version
      * @return bool
      */
-    private function updateFileCleanly($json, array $base, array $new, $requireKey)
+    public function requirePackage($name, $version = 'dev-master')
     {
-        $contents = file_get_contents($json->getPath());
+        chdir($this->workingDir);
+        $installed = ComposerService::requirePackage($name, $version, $this->io);
+        chdir($this->defaultWorkingDir);
 
-        $manipulator = new JsonManipulator($contents);
+        return $installed;
+    }
 
-        foreach ($new as $package => $constraint) {
-            if (!$manipulator->addLink($requireKey, $package, $constraint)) {
-                return false;
-            }
-        }
+    /**
+     * @param string $name
+     * @return bool
+     */
+    public function removePackage($name)
+    {
+        chdir($this->workingDir);
+        $removed = ComposerService::removePackage($name, $this->io);
+        chdir($this->defaultWorkingDir);
 
-        file_put_contents($json->getPath(), $manipulator->getContents());
-
-        return true;
+        return $removed;
     }
 }
