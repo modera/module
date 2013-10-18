@@ -198,6 +198,7 @@ class ComposerService
 
             $lockJson = new JsonFile($lockFile);
             $locker = $lockJson->read();
+
             $packageKey = null;
             foreach ($locker['packages'] as $key => $package) {
                 if ($name == $package['name']) {
@@ -209,6 +210,24 @@ class ComposerService
                 unset($locker['packages'][$packageKey]);
                 $locker['packages'] = array_values($locker['packages']);
             }
+
+            $packageKey = null;
+            foreach ($locker['packages-dev'] as $key => $package) {
+                if ($name == $package['name']) {
+                    $packageKey = $key;
+                    break;
+                }
+            }
+            if (null !== $packageKey) {
+                unset($locker['packages-dev'][$packageKey]);
+                $locker['packages-dev'] = array_values($locker['packages-dev']);
+            }
+
+            if (isset($locker['stability-flags'][$name])) {
+                unset($locker['stability-flags'][$name]);
+                $locker['stability-flags'] = array_values($locker['stability-flags']);
+            }
+
             $locker['hash'] = md5_file($file);
             $lockJson->write($locker);
 
