@@ -225,7 +225,6 @@ class ComposerService
 
             if (isset($locker['stability-flags'][$name])) {
                 unset($locker['stability-flags'][$name]);
-                $locker['stability-flags'] = array_values($locker['stability-flags']);
             }
 
             $locker['hash'] = md5_file($file);
