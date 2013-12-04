@@ -5,22 +5,23 @@ namespace Modera\Module\Repository;
 use Packagist\Api\Client;
 use Packagist\Api\Result\Package;
 use Composer\Composer;
-use Composer\IO\IOInterface;
 use Composer\Package\CompletePackage;
 use Composer\Package\PackageInterface;
 use Modera\Module\Adapter\ComposerAdapter;
 use Modera\Module\Service\ComposerService;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\NullOutput;
 
 /**
  * @copyright 2013 Modera Foundation
- * @author Sergei Vizel <sergei.vizel@modera.net>
+ * @author Sergei Vizel <sergei.vizel@modera.org>
  */
 class ModuleRepository
 {
     /**
-     * @var IOInterface
+     * @var OutputInterface
      */
-    private $io;
+    private $output;
 
     /**
      * @var Composer
@@ -67,7 +68,6 @@ class ModuleRepository
         chdir($this->workingDir);
 
         ComposerAdapter::checkComposer($this->pathToComposer);
-        $this->io = new \Composer\IO\BufferIO();
         $this->options = ComposerService::getOptions($this->getComposer());
 
         chdir($this->defaultWorkingDir);
@@ -79,7 +79,7 @@ class ModuleRepository
     private function getComposer()
     {
         if (!$this->composer) {
-            $this->composer = ComposerAdapter::createComposer($this->io);
+            $this->composer = ComposerAdapter::createComposer();
         }
 
         return $this->composer;
@@ -99,11 +99,49 @@ class ModuleRepository
     }
 
     /**
-     * @return string
+     * @param $port
+     * @param callable $cb
+     */
+    public function connect($port, \Closure $cb)
+    {
+        $loop = new \React\EventLoop\StreamSelectLoop();
+        $dnode = new \DNode\DNode($loop);
+        $dnode->on('error', function($e) {
+            throw $e;
+        });
+        $dnode->connect($port, $cb);
+        $loop->run();
+    }
+
+    /**
+     * @param $port
+     */
+    public function listen($port)
+    {
+        $loop = new \React\EventLoop\StreamSelectLoop();
+        $server = new \DNode\DNode($loop, new \Modera\Module\Server($this));
+        $server->listen($port);
+        $loop->run();
+    }
+
+    /**
+     * @return NullOutput|OutputInterface
      */
     public function getOutput()
     {
-        return $this->io->getOutput();
+        if (!$this->output) {
+            $this->output = new NullOutput();
+        }
+
+        return $this->output;
+    }
+
+    /**
+     * @param OutputInterface $output
+     */
+    public function setOutput(OutputInterface $output)
+    {
+        $this->output = $output;
     }
 
     /**
@@ -134,8 +172,7 @@ class ModuleRepository
     public function getInstalled()
     {
         chdir($this->workingDir);
-        $composer = $this->getComposer();
-        $packages = ComposerService::getInstalledPackages($composer, $this->options['type']);
+        $packages = ComposerService::getInstalledPackages($this->getComposer(), $this->options['type']);
         chdir($this->defaultWorkingDir);
 
         return $packages;
@@ -173,11 +210,7 @@ class ModuleRepository
      */
     public function requirePackage($name, $version = 'dev-master')
     {
-        chdir($this->workingDir);
-        $installed = ComposerService::requirePackage($name, $version, $this->io);
-        chdir($this->defaultWorkingDir);
-
-        return $installed;
+        return ComposerService::requirePackage($this->workingDir, $name, $version, $this->getOutput());
     }
 
     /**
@@ -186,10 +219,6 @@ class ModuleRepository
      */
     public function removePackage($name)
     {
-        chdir($this->workingDir);
-        $removed = ComposerService::removePackage($name, $this->io);
-        chdir($this->defaultWorkingDir);
-
-        return $removed;
+        return ComposerService::removePackage($this->workingDir, $name, $this->getOutput());
     }
 }

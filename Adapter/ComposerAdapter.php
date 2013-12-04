@@ -13,7 +13,7 @@ use Symfony\Component\Console\Output\NullOutput;
 
 /**
  * @copyright 2013 Modera Foundation
- * @author Sergei Vizel <sergei.vizel@modera.net>
+ * @author Sergei Vizel <sergei.vizel@modera.org>
  */
 class ComposerAdapter
 {
