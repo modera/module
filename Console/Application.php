@@ -11,12 +11,13 @@ use Modera\Module\Command;
  */
 class Application extends BaseApplication
 {
-    private $logo = '
-   ______                       __          _______            __
-  / ____/___  ____  ____  ___  / /  ___    /__  __/___   ___  / /
- / /   / __ \/ __ \/ ___/ __ \/ /  / _ \     / / / __ \/ __ \/ /
-/ /___/ /_/ / / / (__ )/ /_/ / /__/  __/    / / / /_/ / /_/ / /__
-\____/\____/_/ /_/____/\____/____/\___/    /_/  \____/\____/____/
+    private static $logo = '
+    __  ___          __
+   /  |/  /___  ____/ /__  _________ _
+  / /|_/ / __ \/ __  / _ \/ ___/ __ `/
+ / /  / / /_/ / /_/ /  __/ /  / /_/ /
+/_/  /_/\____/\__,_/\___/_/   \__,_/
+
 ';
 
     /**
@@ -26,12 +27,13 @@ class Application extends BaseApplication
     {
         $commands = parent::getDefaultCommands();
         $commands[] = new Command\RemoveCommand();
+        $commands[] = new Command\ServerCommand();
 
         return $commands;
     }
 
     public function getHelp()
     {
-        return self::$logo . parent::getHelp();
+        return self::$logo . \Symfony\Component\Console\Application::getHelp();
     }
 }

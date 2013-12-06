@@ -13,7 +13,7 @@ use Modera\Module\Repository\ModuleRepository;
  * @copyright 2013 Modera Foundation
  * @author Sergei Vizel <sergei.vizel@modera.org>
  */
-abstract class ServerCommand extends Command
+class ServerCommand extends Command
 {
     /**
      * Configuration of command

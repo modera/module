@@ -10,7 +10,6 @@ use Composer\Package\PackageInterface;
 use Modera\Module\Adapter\ComposerAdapter;
 use Modera\Module\Service\ComposerService;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Output\NullOutput;
 
 /**
  * @copyright 2013 Modera Foundation
@@ -18,11 +17,6 @@ use Symfony\Component\Console\Output\NullOutput;
  */
 class ModuleRepository
 {
-    /**
-     * @var OutputInterface
-     */
-    private $output;
-
     /**
      * @var Composer
      */
@@ -119,29 +113,9 @@ class ModuleRepository
     public function listen($port)
     {
         $loop = new \React\EventLoop\StreamSelectLoop();
-        $server = new \DNode\DNode($loop, new \Modera\Module\Server($this));
+        $server = new \DNode\DNode($loop, new \Modera\Module\Server($this, $port));
         $server->listen($port);
         $loop->run();
-    }
-
-    /**
-     * @return NullOutput|OutputInterface
-     */
-    public function getOutput()
-    {
-        if (!$this->output) {
-            $this->output = new NullOutput();
-        }
-
-        return $this->output;
-    }
-
-    /**
-     * @param OutputInterface $output
-     */
-    public function setOutput(OutputInterface $output)
-    {
-        $this->output = $output;
     }
 
     /**
@@ -208,17 +182,17 @@ class ModuleRepository
      * @param string $version
      * @return bool
      */
-    public function requirePackage($name, $version = 'dev-master')
+    public function requirePackage($name, $version = 'dev-master', OutputInterface $output = null)
     {
-        return ComposerService::requirePackage($this->workingDir, $name, $version, $this->getOutput());
+        return ComposerService::requirePackage($this->workingDir, $name, $version, $output);
     }
 
     /**
      * @param string $name
      * @return bool
      */
-    public function removePackage($name)
+    public function removePackage($name, OutputInterface $output = null)
     {
-        return ComposerService::removePackage($this->workingDir, $name, $this->getOutput());
+        return ComposerService::removePackage($this->workingDir, $name, $output);
     }
 }
