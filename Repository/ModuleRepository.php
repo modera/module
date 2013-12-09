@@ -110,12 +110,20 @@ class ModuleRepository
     /**
      * @param $port
      */
-    public function listen($port)
+    public function listen($port, $loop = null)
     {
-        $loop = new \React\EventLoop\StreamSelectLoop();
-        $server = new \DNode\DNode($loop, new \Modera\Module\Server($this, $port));
-        $server->listen($port);
-        $loop->run();
+        try {
+            if (!$loop) {
+                $loop = new \React\EventLoop\StreamSelectLoop();
+                $server = new \DNode\DNode($loop, new \Modera\Module\Server($this, $port));
+                $server->listen($port);
+            }
+            $loop->run();
+
+        } catch (\Exception $e) {
+            echo $e->getMessage() . "\n";
+            $this->listen($port, $loop);
+        }
     }
 
     /**
