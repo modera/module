@@ -12,13 +12,10 @@
         }
     ],
     "minimum-stability": "dev",
-    "repositories": [
-        { "type": "vcs", "url": "https://github.com/cravler/dnode-php.git" }
-    ],
     "require": {
         "knplabs/packagist-api": "~1.1",
         "symfony/console": "~2.0",
-        "dnode/dnode": "dev-bugfix"
+        "dnode/dnode": "@dev"
     },
     "require-dev": {
     },
