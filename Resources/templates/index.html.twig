@@ -1,0 +1,113 @@
+{% extends 'layout.html.twig' %}
+
+{% set installed = repo.installed() %}
+{% block container_content %}
+    <script type="text/javascript">
+        $( document ).ready(function() {
+            $('body').on('click', 'a[data-method]', function(e) {
+                e.preventDefault();
+
+                var $el = $(this);
+                var method = $el.data('method');
+                var name = $el.data('name');
+                var version = $el.data('version');
+                var title = method.charAt(0).toUpperCase() + method.substr(1) + ': ' + name;
+                if ('require' == method) {
+                    title += ':' + version;
+                }
+                $('#modal #modalLabel').text(title);
+                $('#modal .modal-body').html('Loading ...');
+
+                var formatMessage = function nl2br (str) {
+                    return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br />$2');
+                };
+                var status = function() {
+                    $.getJSON($el.attr('href').replace('#/call?', '/status?')).success(function(resp) {
+                        var html = resp.msg;
+                        if (true == resp.working) {
+                            setTimeout(function() {
+                                status();
+                            }, 200);
+                            html += 'Loading ...';
+                        } else if (resp.success) {
+                            var removeBtn = $('a[data-method=remove][data-name="' + name + '"]');
+                            var requireBtns = $('a[data-method=require][data-name="' + name + '"]');
+                            var requireBtn = $('a[data-method=require][data-name="' + name + '"][data-version="' + version + '"]');
+                            if ('require' == method) {
+                                removeBtn.show().removeClass('disabled');
+                                requireBtns.removeClass('btn-success disabled').addClass('btn-info');
+                                requireBtn.removeClass('btn-info').addClass('btn-success disabled');
+                            } else {
+                                removeBtn.hide().addClass('disabled');
+                                requireBtns.removeClass('btn-success disabled').addClass('btn-info');
+                            }
+                        }
+                        $('#modal .modal-body').html(formatMessage(html));
+                    });
+                };
+
+                $.getJSON($el.attr('href').substr(1)).success(function(resp) {
+                    if (false == resp.success) {
+                        $('#modal .modal-body').html(resp.msg);
+                    } else {
+                        status();
+                    }
+                });
+            });
+        });
+    </script>
+    <div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="modalLabel">Modal title</h4>
+                </div>
+                <div class="modal-body" style="padding:20px;">
+                    Loading ...
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <table style="width:100%; text-align:center;">
+        <tbody>
+        {% for name in repo.available() %}
+            {% set installed_package = attribute(installed, name)|default(null) %}
+            <tr>
+                <td>
+                    {{ name }}
+                    <a href="#/call?method=remove&name={{ name }}"
+                       data-method="remove"
+                       data-name="{{ name }}"
+                       data-toggle="modal"
+                       data-target="#modal"
+                       class="btn btn-xs btn-danger {{ installed_package ? '' : 'disabled' }}"
+                       style="display:{{ installed_package ? 'inline-block' : 'none' }};"
+                    >Uninstall</a>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                {% for ver in repo.package(name).versions() %}
+                    <a href="#/call?method=require&name={{ name }}&version={{ ver.version() }}"
+                       data-method="require"
+                       data-name="{{ name }}"
+                       data-version="{{ ver.version() }}"
+                       data-toggle="modal"
+                       data-target="#modal"
+                    {% if installed_package.prettyVersion()|default(null) == ver.version() %}
+                       class="btn btn-xs btn-success disabled"
+                    {% else %}
+                       class="btn btn-xs btn-info"
+                    {% endif %}
+                    >{{ ver.version() }}</a>
+                {% endfor %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

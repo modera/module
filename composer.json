@@ -14,8 +14,11 @@
     "minimum-stability": "dev",
     "require": {
         "knplabs/packagist-api": "~1.1",
-        "symfony/console": "~2.0",
-        "dnode/dnode": "@dev"
+        "symfony/console": "~2.2",
+        "dnode/dnode": "@dev",
+        "react/http": "0.3.*",
+        "guzzle/plugin": "*",
+        "twig/twig": "~1.0"
     },
     "require-dev": {
     },
