@@ -29,6 +29,7 @@ class ClientCommand extends Command
                 new InputOption('--working-dir', '-d', InputOption::VALUE_REQUIRED, 'If specified, use the given directory as working directory.'),
                 new InputOption('--server-port', null, InputOption::VALUE_REQUIRED, '', 8080),
                 new InputOption('--port', null, InputOption::VALUE_REQUIRED, '', 8081),
+                new InputOption('--ui', null, InputOption::VALUE_OPTIONAL, '', false),
             ))
         ;
     }
@@ -76,12 +77,23 @@ class ClientCommand extends Command
     /**
      * @param InputInterface $input
      * @param OutputInterface $output
+     * @return mixed
+     */
+    protected function getWithUi(InputInterface $input, OutputInterface $output)
+    {
+        return $input->getParameterOption('--ui', false);
+    }
+
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $workingDir = $this->getWorkingDir($input, $output);
         $serverPort = $this->getServerPort($input, $output);
         $port       = $this->getPort($input, $output);
+        $withUi     = $this->getWithUi($input, $output);
 
         $output->writeln('<info>Modera module client started</info>');
         $output->writeln('    <info>working-dir: ' . $workingDir . '</info>');
@@ -94,7 +106,7 @@ class ClientCommand extends Command
         $loop = \React\EventLoop\Factory::create();
         $socket = new \React\Socket\Server($loop);
         $http = new \React\Http\Server($socket);
-        $http->on('request', function (Request $request, Response $response) use ($twig, $workingDir, $serverPort) {
+        $http->on('request', function (Request $request, Response $response) use ($twig, $workingDir, $serverPort, $withUi) {
 
             $path = $request->getPath();
             if (in_array($path, array('/call', '/status'))) {
@@ -103,9 +115,17 @@ class ClientCommand extends Command
                 try {
                     $moduleRepository = new ModuleRepository($workingDir);
                     $moduleRepository->connect($serverPort, function($remote, $connection) use ($path, $params, $response) {
-                        $remote->{substr($path, 1)}($params, function($resp) use ($connection, $response) {
+                        $callback = null;
+                        if (isset($params['callback'])) {
+                            $callback = $params['callback'];
+                        }
+                        $remote->{substr($path, 1)}($params, function($resp) use ($connection, $response, $callback) {
                             $connection->end();
-                            $response->end(json_encode($resp));
+                            $resp = json_encode($resp);
+                            if ($callback) {
+                                $resp = $callback . '(' . $resp . ')';
+                            }
+                            $response->end($resp);
                         });
                     });
                 } catch (\Exception $e) {
@@ -115,7 +135,7 @@ class ClientCommand extends Command
                     )));
                 }
 
-            } else {
+            } else if ($withUi) {
                 $response->writeHead(200, array('Content-Type' => 'text/html'));
                 try {
                     $moduleRepository = new ModuleRepository($workingDir);
@@ -125,9 +145,12 @@ class ClientCommand extends Command
                 } catch (\Exception $e) {
                     $response->end($e->getMessage());
                 }
+            } else {
+                $response->writeHead(200, array('Content-Type' => 'text/html'));
+                $response->end('Client started');
             }
         });
-        $socket->listen($port);
+        $socket->listen($port, '0.0.0.0');
         $loop->run();
     }
 }

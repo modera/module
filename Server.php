@@ -53,14 +53,16 @@ class Server
      */
     private function params($params)
     {
-        return array_merge(
-            array(
-                'method'  => '',
-                'name'    => '',
-                'version' => '',
-                'hash'    => '',
-            ), (array) $params
+        $defaults = array(
+            'method'  => '',
+            'name'    => '',
+            'version' => '',
+            'hash'    => '',
         );
+
+        $result = array_intersect_key((array) $params, $defaults) + $defaults;
+
+        return $result;
     }
 
     /**
@@ -99,6 +101,7 @@ class Server
         );
 
         $params = $this->params($params);
+
         if ($params == $this->output['params']) {
             $msg = $this->output['msg'];
             if ('remove' == $params['method']) {
