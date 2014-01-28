@@ -3,7 +3,9 @@
 namespace Modera\Module\Composer;
 
 use Composer\Composer;
+use Composer\Script\Event;
 use Composer\Script\CommandEvent;
+use Composer\Script\PackageEvent;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\PhpExecutableFinder;
 use Modera\Module\Service\ComposerService;
@@ -14,6 +16,34 @@ use Modera\Module\Service\ComposerService;
  */
 class ScriptHandler
 {
+    /**
+     * @param Event $event
+     */
+    public static function eventDispatcher(Event $event)
+    {
+        if ($event instanceof PackageEvent) {
+            $package = $event->getOperation()->getPackage();
+            $extra = $package->getExtra();
+
+            if (is_array($extra) && isset($extra['modera-module'])) {
+                if (isset($extra['modera-module']['scripts'])) {
+                    if (isset($extra['modera-module']['scripts'][$event->getName()])) {
+
+                        $scripts = $extra['modera-module']['scripts'][$event->getName()];
+                        foreach ($scripts as $script) {
+                            if (is_callable($script)) {
+                                $className = substr($script, 0, strpos($script, '::'));
+                                $methodName = substr($script, strpos($script, '::') + 2);
+                                $className::$methodName($event);
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * @param CommandEvent $event
      */
