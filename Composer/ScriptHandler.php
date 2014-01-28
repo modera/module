@@ -20,8 +20,6 @@ class ScriptHandler extends AbstractScriptHandler
      */
     public static function eventDispatcher(Event $event)
     {
-        echo '>>> '. $event->getName() . PHP_EOL;
-
         if ($event instanceof PackageEvent) {
             $operation = $event->getOperation();
             if ($operation instanceof UpdateOperation) {
@@ -30,11 +28,18 @@ class ScriptHandler extends AbstractScriptHandler
                 $package = $operation->getPackage();
             }
 
+            $options = ComposerService::getOptions($event->getComposer());
+            if ($package->getType() != $options['type']) {
+                return;
+            }
+
             $extra = $package->getExtra();
 
             if (is_array($extra) && isset($extra['modera-module'])) {
                 if (isset($extra['modera-module']['scripts'])) {
                     if (isset($extra['modera-module']['scripts'][$event->getName()])) {
+
+                        echo '>>> '. $event->getName() . PHP_EOL;
 
                         $scripts = $extra['modera-module']['scripts'][$event->getName()];
                         foreach ($scripts as $script) {
