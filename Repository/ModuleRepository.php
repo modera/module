@@ -72,6 +72,7 @@ class ModuleRepository
         if (!$this->composer) {
             putenv("COMPOSER=" . $this->workingDir . "/composer.json");
             putenv("COMPOSER_HOME=" . $this->workingDir . "/app/cache/.composer");
+            putenv("COMPOSER_VENDOR_DIR=" . $this->workingDir . "/vendor");
 
             ComposerAdapter::checkComposer($this->pathToComposer);
 
