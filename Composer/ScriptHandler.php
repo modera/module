@@ -6,6 +6,7 @@ use Composer\Composer;
 use Composer\Script\Event;
 use Composer\Script\CommandEvent;
 use Composer\Script\PackageEvent;
+use Composer\DependencyResolver\Operation\UpdateOperation;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\PhpExecutableFinder;
 use Modera\Module\Service\ComposerService;
@@ -21,8 +22,16 @@ class ScriptHandler
      */
     public static function eventDispatcher(Event $event)
     {
+        echo '>>> '. $event->getName() . PHP_EOL;
+
         if ($event instanceof PackageEvent) {
-            $package = $event->getOperation()->getPackage();
+            $operation = $event->getOperation();
+            if ($operation instanceof UpdateOperation) {
+                $package = $operation->getTargetPackage();
+            } else {
+                $package = $operation->getPackage();
+            }
+
             $extra = $package->getExtra();
 
             if (is_array($extra) && isset($extra['modera-module'])) {
@@ -31,6 +40,9 @@ class ScriptHandler
 
                         $scripts = $extra['modera-module']['scripts'][$event->getName()];
                         foreach ($scripts as $script) {
+
+                            echo '>>> '. $script . PHP_EOL;
+
                             if (is_callable($script)) {
                                 $className = substr($script, 0, strpos($script, '::'));
                                 $methodName = substr($script, strpos($script, '::') + 2);
