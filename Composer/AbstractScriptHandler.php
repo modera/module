@@ -2,7 +2,7 @@
 
 namespace Modera\Module\Composer;
 
-use Composer\Script\CommandEvent;
+use Composer\Script\Event;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\PhpExecutableFinder;
 
@@ -13,13 +13,13 @@ use Symfony\Component\Process\PhpExecutableFinder;
 abstract class AbstractScriptHandler
 {
     /**
-     * @param CommandEvent $event
+     * @param Event $event
      * @param $appDir
      * @param $cmd
      * @param int $timeout
      * @throws \RuntimeException
      */
-    protected static function executeCommand(CommandEvent $event, $appDir, $cmd, $timeout = 300)
+    protected static function executeCommand(Event $event, $appDir, $cmd, $timeout = 300)
     {
         $php = escapeshellarg(static::getPhp());
         $console = escapeshellarg($appDir . '/console');
@@ -35,10 +35,10 @@ abstract class AbstractScriptHandler
     }
 
     /**
-     * @param CommandEvent $event
+     * @param Event $event
      * @return array
      */
-    protected static function getOptions(CommandEvent $event)
+    protected static function getOptions(Event $event)
     {
         $options = array_merge(array(
             'symfony-app-dir' => 'app',

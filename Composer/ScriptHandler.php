@@ -35,13 +35,13 @@ class ScriptHandler extends AbstractScriptHandler
 
             $extra = $package->getExtra();
 
-            if (is_array($extra) && isset($extra['modera-module'])) {
-                if (isset($extra['modera-module']['scripts'])) {
-                    if (isset($extra['modera-module']['scripts'][$event->getName()])) {
+            if (is_array($extra) && isset($extra[$options['type']])) {
+                if (isset($extra[$options['type']]['scripts'])) {
+                    if (isset($extra[$options['type']]['scripts'][$event->getName()])) {
 
                         echo '>>> '. $event->getName() . PHP_EOL;
 
-                        $scripts = $extra['modera-module']['scripts'][$event->getName()];
+                        $scripts = $extra[$options['type']]['scripts'][$event->getName()];
                         foreach ($scripts as $script) {
 
                             echo '>>> '. $script . PHP_EOL;
