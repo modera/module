@@ -18,7 +18,7 @@ class ScriptHandler extends AbstractScriptHandler
     /**
      * @var array
      */
-    private static $scripts = array();
+    protected static $scripts = array();
 
     /**
      * @param Event $event
