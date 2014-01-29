@@ -16,15 +16,12 @@ use Modera\Module\Service\ComposerService;
 class ScriptHandler extends AbstractScriptHandler
 {
     /**
-     * @var array
-     */
-    protected static $scripts = array();
-
-    /**
      * @param Event $event
      */
     public static function eventDispatcher(Event $event)
     {
+        static $_scripts = array();
+
         if ($event instanceof PackageEvent) {
             $operation = $event->getOperation();
             if ($operation instanceof UpdateOperation) {
@@ -49,7 +46,7 @@ class ScriptHandler extends AbstractScriptHandler
                             $scripts = array($scripts);
                         }
                         foreach ($scripts as $script) {
-                            static::$scripts[$event->getName()][] = array(
+                            $_scripts[$event->getName()][] = array(
                                 'script' => $script,
                                 'event'  => $event,
                             );
@@ -59,7 +56,7 @@ class ScriptHandler extends AbstractScriptHandler
                 }
             }
         } else {
-            foreach (static::$scripts as $eventName => $scripts) {
+            foreach ($_scripts as $eventName => $scripts) {
 
                 echo '>>> '. $event->getName() . ':' . $eventName . PHP_EOL;
 
