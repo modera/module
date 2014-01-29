@@ -16,6 +16,11 @@ use Modera\Module\Service\ComposerService;
 class ScriptHandler extends AbstractScriptHandler
 {
     /**
+     * @var array
+     */
+    private static $scripts = array();
+
+    /**
      * @param Event $event
      */
     public static function eventDispatcher(Event $event)
@@ -39,20 +44,33 @@ class ScriptHandler extends AbstractScriptHandler
                 if (isset($extra[$options['type']]['scripts'])) {
                     if (isset($extra[$options['type']]['scripts'][$event->getName()])) {
 
-                        echo '>>> '. $event->getName() . PHP_EOL;
-
                         $scripts = $extra[$options['type']]['scripts'][$event->getName()];
+                        if (!is_array($scripts)) {
+                            $scripts = array($scripts);
+                        }
                         foreach ($scripts as $script) {
-
-                            echo '>>> '. $script . PHP_EOL;
-
-                            if (is_callable($script)) {
-                                $className = substr($script, 0, strpos($script, '::'));
-                                $methodName = substr($script, strpos($script, '::') + 2);
-                                $className::$methodName($event);
-                            }
+                            static::$scripts[$event->getName()][] = array(
+                                'script' => $script,
+                                'event'  => $event,
+                            );
                         }
 
+                    }
+                }
+            }
+        } else {
+            foreach (static::$scripts as $eventName => $scripts) {
+
+                echo '>>> '. $event->getName() . ':' . $eventName . PHP_EOL;
+
+                foreach ($scripts as $data) {
+                    if (is_callable($data['script'])) {
+
+                        echo '>>> '. $data['script'] . PHP_EOL;
+
+                        $className = substr($data['script'], 0, strpos($data['script'], '::'));
+                        $methodName = substr($data['script'], strpos($data['script'], '::') + 2);
+                        $className::$methodName($data['event']);
                     }
                 }
             }
