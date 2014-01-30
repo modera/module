@@ -36,6 +36,7 @@ class ScriptHandler extends AbstractScriptHandler
             }
 
             $extra = $package->getExtra();
+            $delayedEvents = array('post-package-install', 'post-package-update');
 
             if (is_array($extra) && isset($extra[$options['type']])) {
                 if (isset($extra[$options['type']]['scripts'])) {
@@ -46,16 +47,22 @@ class ScriptHandler extends AbstractScriptHandler
                             $scripts = array($scripts);
                         }
                         foreach ($scripts as $script) {
-                            $_scripts[$event->getName()][] = array(
-                                'script' => $script,
-                                'event'  => $event,
-                            );
+                            if (in_array($event->getName(), $delayedEvents)) {
+                                $_scripts[$event->getName()][] = array(
+                                    'script' => $script,
+                                    'event'  => $event,
+                                );
+                            } else if (is_callable($script)) {
+                                $className = substr($script, 0, strpos($script, '::'));
+                                $methodName = substr($script, strpos($script, '::') + 2);
+                                $className::$methodName($event);
+                            }
                         }
 
                     }
                 }
             }
-        } else {
+        } else if (in_array($event->getName(), array('post-package-install', 'post-package-update'))) {
             foreach ($_scripts as $eventName => $scripts) {
 
                 echo '>>> '. $event->getName() . ':' . $eventName . PHP_EOL;
