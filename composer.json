@@ -11,11 +11,10 @@
             "email": "sergei.vizel@modera.org"
         }
     ],
-    "minimum-stability": "dev",
     "require": {
         "knplabs/packagist-api": "~1.1",
         "symfony/console": "~2.2",
-        "dnode/dnode": "@dev",
+        "dnode/dnode": "~0.2.0",
         "react/http": "0.3.*",
         "guzzle/plugin": "*",
         "twig/twig": "~1.0"
