@@ -40,7 +40,7 @@ class ComposerService
      * @param string|null $type
      * @return array
      */
-    public function getRegisterBundles(Composer $composer, $type = null)
+    public static function getRegisterBundles(Composer $composer, $type = null)
     {
         $bundles = array();
         $packages = static::getInstalledPackages($composer, $type);
