@@ -26,22 +26,32 @@ class ComposerService
         $extra = $composer->getPackage()->getExtra();
         $options = array_merge(array(
 
-            'type'             => 'modera-module',
-            'file'             => 'app/modules/bundles.php',
-            'packagist-url'    => 'https://packages.modera.org',
-            'register-bundles' => array(),
+            'type'          => 'modera-module',
+            'file'          => 'app/modules/bundles.php',
+            'packagist-url' => 'https://packages.modera.org',
 
         ), isset($extra['modera-module']) ? $extra['modera-module'] : array());
 
-        $packages = static::getInstalledPackages($composer, $options['type']);
+        return $options;
+    }
+
+    /**
+     * @param Composer $composer
+     * @param string|null $type
+     * @return array
+     */
+    public function getRegisterBundles(Composer $composer, $type = null)
+    {
+        $bundles = array();
+        $packages = static::getInstalledPackages($composer, $type);
         foreach ($packages as $package) {
             $extra = $package->getExtra();
             if (isset($extra['modera-module']) && isset($extra['modera-module']['register-bundle'])) {
-                $options['register-bundles'][] = $extra['modera-module']['register-bundle'];
+                $bundles[] = $extra['modera-module']['register-bundle'];
             }
         }
 
-        return $options;
+        return $bundles;
     }
 
     /**
