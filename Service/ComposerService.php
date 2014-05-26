@@ -27,7 +27,6 @@ class ComposerService
         $options = array_merge(array(
 
             'type'          => 'modera-module',
-            'file'          => 'app/modules/bundles.php',
             'packagist-url' => 'https://packages.modera.org',
 
         ), isset($extra['modera-module']) ? $extra['modera-module'] : array());
