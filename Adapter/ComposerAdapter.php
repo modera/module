@@ -90,12 +90,15 @@ class ComposerAdapter
             return $pathToComposer;
         }
 
-        if (file_exists('composer.phar')) {
-            return 'composer.phar';
-        }
+        $composerFile = 'composer.phar';
+        for ($i = 0; $i < 3; $i++) {
+            if ($i > 0) {
+                $composerFile = '../' . $composerFile;
+            }
 
-        if (file_exists('../composer.phar')) {
-            return '../composer.phar';
+            if (file_exists($composerFile)) {
+                return $composerFile;
+            }
         }
 
         $composerExecs = array('composer.phar', 'composer');

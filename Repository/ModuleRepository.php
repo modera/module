@@ -35,11 +35,6 @@ class ModuleRepository
     /**
      * @var string
      */
-    private $defaultWorkingDir;
-
-    /**
-     * @var string
-     */
     private $pathToComposer;
 
     /**
@@ -53,18 +48,20 @@ class ModuleRepository
      */
     public function __construct($workingDir = null, $pathToComposer = null)
     {
-        $this->defaultWorkingDir = getcwd();
-        $this->workingDir        = $workingDir ?: $this->defaultWorkingDir;
-        $this->pathToComposer    = $pathToComposer;
+        $this->workingDir     = $workingDir ?: getcwd();
+        $this->pathToComposer = $pathToComposer;
+    }
 
-        putenv("COMPOSER_HOME=" . $this->workingDir . "/app/cache/.composer");
+    /**
+     * @return array
+     */
+    private function getOptions()
+    {
+        if (!count($this->options)) {
+            $this->options = ComposerService::getOptions($this->getComposer());
+        }
 
-        chdir($this->workingDir);
-
-        ComposerAdapter::checkComposer($this->pathToComposer);
-        $this->options = ComposerService::getOptions($this->getComposer());
-
-        chdir($this->defaultWorkingDir);
+        return $this->options;
     }
 
     /**
@@ -73,6 +70,12 @@ class ModuleRepository
     private function getComposer()
     {
         if (!$this->composer) {
+            putenv("COMPOSER=" . $this->workingDir . "/composer.json");
+            putenv("COMPOSER_HOME=" . $this->workingDir . "/app/cache/.composer");
+            putenv("COMPOSER_VENDOR_DIR=" . $this->workingDir . "/vendor");
+
+            ComposerAdapter::checkComposer($this->pathToComposer);
+
             $this->composer = ComposerAdapter::createComposer();
         }
 
@@ -85,8 +88,9 @@ class ModuleRepository
     private function getPackagist()
     {
         if (!$this->packagist) {
+            $options = $this->getOptions();
             $this->packagist = new Client();
-            $this->packagist->setPackagistUrl($this->options['packagist-url']);
+            $this->packagist->setPackagistUrl($options['packagist-url']);
         }
 
         return $this->packagist;
@@ -110,12 +114,20 @@ class ModuleRepository
     /**
      * @param $port
      */
-    public function listen($port)
+    public function listen($port, $loop = null)
     {
-        $loop = new \React\EventLoop\StreamSelectLoop();
-        $server = new \DNode\DNode($loop, new \Modera\Module\Server($this, $port));
-        $server->listen($port);
-        $loop->run();
+        try {
+            if (!$loop) {
+                $loop = new \React\EventLoop\StreamSelectLoop();
+                $server = new \DNode\DNode($loop, new \Modera\Module\Server($this, $port));
+                $server->listen($port);
+            }
+            $loop->run();
+
+        } catch (\Exception $e) {
+            echo $e->getMessage() . "\n";
+            $this->listen($port, $loop);
+        }
     }
 
     /**
@@ -133,9 +145,7 @@ class ModuleRepository
      */
     public function getInstalledByName($name)
     {
-        chdir($this->workingDir);
         $package = ComposerService::getInstalledPackageByName($this->getComposer(), $name);
-        chdir($this->defaultWorkingDir);
 
         return $package;
     }
@@ -145,9 +155,8 @@ class ModuleRepository
      */
     public function getInstalled()
     {
-        chdir($this->workingDir);
-        $packages = ComposerService::getInstalledPackages($this->getComposer(), $this->options['type']);
-        chdir($this->defaultWorkingDir);
+        $options = $this->getOptions();
+        $packages = ComposerService::getInstalledPackages($this->getComposer(), $options['type']);
 
         return $packages;
     }
@@ -157,8 +166,9 @@ class ModuleRepository
      */
     public function getAvailable()
     {
+        $options = $this->getOptions();
         $client = $this->getPackagist();
-        $data = $client->all(array('type' => $this->options['type']));
+        $data = $client->all(array('type' => $options['type']));
 
         return $data;
     }

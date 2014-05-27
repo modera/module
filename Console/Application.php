@@ -28,6 +28,7 @@ class Application extends BaseApplication
         $commands = parent::getDefaultCommands();
         $commands[] = new Command\RemoveCommand();
         $commands[] = new Command\ServerCommand();
+        $commands[] = new Command\ClientCommand();
 
         return $commands;
     }
