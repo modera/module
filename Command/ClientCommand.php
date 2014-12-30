@@ -114,7 +114,8 @@ class ClientCommand extends Command
                 $response->writeHead(200, array('Content-Type' => 'text/html'));
                 try {
                     $response->end($this->getTwigEnv()->render('index.html.twig', array(
-                        'repo' => new ModuleRepository($workingDir),
+                        'repo'       => new ModuleRepository($workingDir),
+                        'pathPrefix' => $pathPrefix ?: '',
                     )));
                 } catch (\Exception $e) {
                     $response->end($e->getMessage());

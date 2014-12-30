@@ -22,7 +22,7 @@
                     return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br />$2');
                 };
                 var status = function() {
-                    $.getJSON('/module-service' + $el.attr('href').replace('#/call?', '/status?')).success(function(resp) {
+                    $.getJSON('{{ pathPrefix }}' + $el.attr('href').replace('#/call?', '/status?')).success(function(resp) {
                         var html = resp.msg;
                         if (true == resp.working) {
                             setTimeout(function() {
@@ -46,7 +46,7 @@
                     });
                 };
 
-                $.getJSON('/module-service' + $el.attr('href').substr(1)).success(function(resp) {
+                $.getJSON('{{ pathPrefix }}' + $el.attr('href').substr(1)).success(function(resp) {
                     if (false == resp.success) {
                         $('#modal .modal-body').html(resp.msg);
                     } else {
