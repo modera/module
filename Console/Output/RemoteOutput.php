@@ -6,25 +6,25 @@ use Symfony\Component\Console\Output\Output;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface;
 
 /**
- * @copyright 2013 Modera Foundation
- * @author Sergei Vizel <sergei.vizel@modera.org>
+ * @author    Sergei Vizel <sergei.vizel@modera.org>
+ * @copyright 2014 Modera Foundation
  */
 class RemoteOutput extends Output
 {
     /**
      * @var callable
      */
-    protected $remote;
+    protected $closure;
 
     /**
-     * @param callable $remote
+     * @param callable $closure
      * @param bool|int $verbosity
      * @param bool $decorated
      * @param OutputFormatterInterface $formatter
      */
-    public function __construct(\Closure $remote, $verbosity = self::VERBOSITY_NORMAL, $decorated = false, OutputFormatterInterface $formatter = null)
+    public function __construct(\Closure $closure, $verbosity = self::VERBOSITY_NORMAL, $decorated = false, OutputFormatterInterface $formatter = null)
     {
-        $this->remote = $remote;
+        $this->closure = $closure;
 
         parent::__construct($verbosity, $decorated, $formatter);
     }
@@ -35,8 +35,8 @@ class RemoteOutput extends Output
      */
     protected function doWrite($message, $newline)
     {
-        $remote = $this->remote;
-        $remote($message . ($newline ? PHP_EOL : ''));
+        $closure = $this->closure;
+        $closure($message . ($newline ? PHP_EOL : ''));
     }
 }
 

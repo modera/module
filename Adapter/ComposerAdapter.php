@@ -12,8 +12,8 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 
 /**
- * @copyright 2013 Modera Foundation
- * @author Sergei Vizel <sergei.vizel@modera.org>
+ * @author    Sergei Vizel <sergei.vizel@modera.org>
+ * @copyright 2014 Modera Foundation
  */
 class ComposerAdapter
 {

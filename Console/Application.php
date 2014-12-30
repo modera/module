@@ -6,8 +6,8 @@ use Composer\Console\Application as BaseApplication;
 use Modera\Module\Command;
 
 /**
- * @copyright 2013 Modera Foundation
- * @author Sergei Vizel <sergei.vizel@modera.org>
+ * @author    Sergei Vizel <sergei.vizel@modera.org>
+ * @copyright 2014 Modera Foundation
  */
 class Application extends BaseApplication
 {
@@ -26,9 +26,8 @@ class Application extends BaseApplication
     protected function getDefaultCommands()
     {
         $commands = parent::getDefaultCommands();
-        $commands[] = new Command\RemoveCommand();
-        $commands[] = new Command\ServerCommand();
         $commands[] = new Command\ClientCommand();
+        $commands[] = new Command\PackageCommand();
 
         return $commands;
     }

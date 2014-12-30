@@ -12,8 +12,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Modera\Module\Console\Application;
 
 /**
- * @copyright 2013 Modera Foundation
- * @author Sergei Vizel <sergei.vizel@modera.org>
+ * @author    Sergei Vizel <sergei.vizel@modera.org>
+ * @copyright 2014 Modera Foundation
  */
 class ComposerService
 {
@@ -153,7 +153,7 @@ class ComposerService
 
         $input = new ArrayInput(array(
             'command'       => 'remove',
-            'package'       => $name,
+            'packages'      => array($name),
             '--working-dir' => $workingDir,
         ));
         $input->setInteractive(false);

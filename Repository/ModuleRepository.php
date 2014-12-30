@@ -12,8 +12,8 @@ use Modera\Module\Service\ComposerService;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * @copyright 2013 Modera Foundation
- * @author Sergei Vizel <sergei.vizel@modera.org>
+ * @author    Sergei Vizel <sergei.vizel@modera.org>
+ * @copyright 2014 Modera Foundation
  */
 class ModuleRepository
 {
@@ -94,40 +94,6 @@ class ModuleRepository
         }
 
         return $this->packagist;
-    }
-
-    /**
-     * @param $port
-     * @param callable $cb
-     */
-    public function connect($port, \Closure $cb)
-    {
-        $loop = new \React\EventLoop\StreamSelectLoop();
-        $dnode = new \DNode\DNode($loop);
-        $dnode->on('error', function($e) {
-            throw $e;
-        });
-        $dnode->connect($port, $cb);
-        $loop->run();
-    }
-
-    /**
-     * @param $port
-     */
-    public function listen($port, $loop = null)
-    {
-        try {
-            if (!$loop) {
-                $loop = new \React\EventLoop\StreamSelectLoop();
-                $server = new \DNode\DNode($loop, new \Modera\Module\Server($this, $port));
-                $server->listen($port);
-            }
-            $loop->run();
-
-        } catch (\Exception $e) {
-            echo $e->getMessage() . "\n";
-            $this->listen($port, $loop);
-        }
     }
 
     /**

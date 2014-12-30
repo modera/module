@@ -14,7 +14,6 @@
     "require": {
         "knplabs/packagist-api": "~1.1",
         "symfony/console": "~2.2",
-        "cravler/dnode": "~0.2.0",
         "react/http": "0.3.*",
         "guzzle/plugin": "*",
         "twig/twig": "~1.0"
