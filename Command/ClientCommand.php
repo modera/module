@@ -91,8 +91,8 @@ class ClientCommand extends Command
                 switch ($path) {
                     case '/call':
                         $headers = $request->getHeaders();
-                        $outputUrl  = 'http://' . $headers['Host'] . ':' . $input->getOption('listen-port') . '/update-status';
-                        $resp = $client->callMethod($params, $outputUrl);
+                        $url  = 'http://' . $headers['Host'] . ':' . $input->getOption('listen-port');
+                        $resp = $client->callMethod($params, $url . '/update-status');
                         break;
                     case '/status':
                         $resp = $client->getStatus($params);

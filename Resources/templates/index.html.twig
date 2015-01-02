@@ -11,6 +11,9 @@
                 var method = $el.data('method');
                 var name = $el.data('name');
                 var version = $el.data('version');
+                if ('remove' == method) {
+                    version = $('a.btn-success[data-method=require][data-name="' + name + '"]').data('version');
+                }
                 var title = method.charAt(0).toUpperCase() + method.substr(1) + ': ' + name;
                 if ('require' == method) {
                     title += ':' + version;
@@ -21,6 +24,11 @@
                 var formatMessage = function nl2br (str) {
                     return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br />$2');
                 };
+                var isDependency = function(name, callback) {
+                    $.getJSON('{{ pathPrefix }}' + '/call?method=is-dependency&name=' + name).success(function(resp) {
+                        callback(resp.is_dependency);
+                    });
+                };
                 var status = function() {
                     $.getJSON('{{ pathPrefix }}' + $el.attr('href').replace('#/call?', '/status?')).success(function(resp) {
                         var html = resp.msg;
@@ -30,6 +38,7 @@
                             }, 200);
                             html += 'Loading ...';
                         } else if (resp.success) {
+                            var dependencyBtn = $('a[data-type=dependency][data-name="' + name + '"]');
                             var removeBtn = $('a[data-method=remove][data-name="' + name + '"]');
                             var requireBtns = $('a[data-method=require][data-name="' + name + '"]');
                             var requireBtn = $('a[data-method=require][data-name="' + name + '"][data-version="' + version + '"]');
@@ -41,6 +50,14 @@
                                 removeBtn.hide().addClass('disabled');
                                 requireBtns.removeClass('btn-success disabled').addClass('btn-info');
                             }
+                            isDependency(name, function(status) {
+                                if (true == status) {
+                                    dependencyBtn.show();
+                                    requireBtn.removeClass('btn-info');
+                                } else {
+                                    dependencyBtn.hide();
+                                }
+                            });
                         }
                         $('#modal .modal-body').html(formatMessage(html));
                     });
@@ -76,16 +93,22 @@
         <tbody>
         {% for name in repo.available() %}
             {% set installed_package = attribute(installed, name)|default(null) %}
+            {% set is_dependency = repo.isInstalledAsDependency(name) %}
             <tr>
                 <td>
                     {{ name }}
+                    <a class="btn btn-xs btn-warning disabled"
+                       data-type="dependency"
+                       data-name="{{ name }}"
+                       style="display:{{ installed_package and is_dependency == true ? 'inline-block' : 'none' }};"
+                    >Dependency</a>
                     <a href="#/call?method=remove&name={{ name }}"
                        data-method="remove"
                        data-name="{{ name }}"
                        data-toggle="modal"
                        data-target="#modal"
                        class="btn btn-xs btn-danger {{ installed_package ? '' : 'disabled' }}"
-                       style="display:{{ installed_package ? 'inline-block' : 'none' }};"
+                       style="display:{{ installed_package and is_dependency == false ? 'inline-block' : 'none' }};"
                     >Uninstall</a>
                 </td>
             </tr>
@@ -99,9 +122,9 @@
                        data-toggle="modal"
                        data-target="#modal"
                     {% if installed_package.prettyVersion()|default(null) == ver.version() %}
-                       class="btn btn-xs btn-success disabled"
+                       class="btn btn-xs btn-warning {{ is_dependency == true ? '' : 'btn-success disabled' }}"
                     {% else %}
-                       class="btn btn-xs btn-info"
+                       class="btn btn-xs btn-warning btn-info"
                     {% endif %}
                     >{{ ver.version() }}</a>
                 {% endfor %}

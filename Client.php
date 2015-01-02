@@ -2,6 +2,8 @@
 
 namespace Modera\Module;
 
+use Modera\Module\Repository\ModuleRepository;
+
 /**
  * @author    Sergei Vizel <sergei.vizel@modera.org>
  * @copyright 2014 Modera Foundation
@@ -46,34 +48,43 @@ class Client
             'msg'     => 'Error'
         );
 
-        if ($this->output['working']) {
-            $response['msg'] = 'The "' . $this->output['params']['method'] . '" method is already running!';
+        if ('is-dependency' == $params['method']) {
+            $moduleRepository = new ModuleRepository($this->workingDir);
+            $response = array(
+                'success'       => true,
+                'is_dependency' => $moduleRepository->isInstalledAsDependency($params['name']),
+            );
 
-        } else if (in_array($params['method'], array('require', 'remove'))) {
+        } else {
+            if ($this->output['working']) {
+                $response['msg'] = 'The "' . $this->output['params']['method'] . '" method is already running!';
 
-            $this->output['backspace'] = false;
-            $this->output['success']   = false;
-            $this->output['working']   = true;
-            $this->output['params']    = $params;
-            $this->output['msg']       = '';
+            } else if (in_array($params['method'], array('require', 'remove'))) {
 
-            $response['success'] = true;
-            $response['msg'] = ucfirst($params['method']) . ': ' . $params['name'];
+                $this->output['backspace'] = false;
+                $this->output['success']   = false;
+                $this->output['working']   = true;
+                $this->output['params']    = $params;
+                $this->output['msg']       = '';
 
-            if ('require' == $params['method']) {
-                $response['msg'] .= ':' . $params['version'];
+                $response['success'] = true;
+                $response['msg'] = ucfirst($params['method']) . ': ' . $params['name'];
+
+                if ('require' == $params['method']) {
+                    $response['msg'] .= ':' . $params['version'];
+                }
+                echo $response['msg'] . "\n";
             }
-            echo $response['msg'] . "\n";
-        }
 
-        if (true === $response['success']) {
-            $command = implode(' ', array(
-                $this->createCommand($params),
-                '--working-dir=' . $this->workingDir,
-                '--output-url=' . $outputUrl
-            ));
-            $outputFile = '/dev/null';
-            $response['pid'] = shell_exec(sprintf('%s > %s 2>&1 & echo $!', $command, $outputFile));
+            if (true === $response['success']) {
+                $command = implode(' ', array(
+                    $this->createCommand($params),
+                    '--working-dir=' . $this->workingDir,
+                    '--output-url=' . $outputUrl
+                ));
+                $outputFile = '/dev/null';
+                $response['pid'] = shell_exec(sprintf('%s > %s 2>&1 & echo $!', $command, $outputFile));
+            }
         }
 
         return $response;

@@ -78,6 +78,7 @@ class ComposerService
     }
 
     /**
+     * @param Composer $composer
      * @param $name
      * @return null|CompletePackage
      */
@@ -90,6 +91,25 @@ class ComposerService
             if ($installer->isInstalled($repo, $package)) {
                 return $package;
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param Composer $composer
+     * @param $name
+     * @return bool|null
+     */
+    public static function isInstalledAsDependency(Composer $composer, $name)
+    {
+        $package = static::getInstalledPackageByName($composer, $name);
+        if ($package) {
+            if (in_array($name, array_keys($composer->getPackage()->getRequires()))) {
+                return false;
+            }
+
+            return true;
         }
 
         return null;
@@ -125,6 +145,7 @@ class ComposerService
             'command'       => 'require',
             'packages'      => array($name . ':' . $version),
             '--working-dir' => $workingDir,
+            '--update-with-dependencies' => true,
         ));
         $input->setInteractive(false);
 
@@ -155,6 +176,7 @@ class ComposerService
             'command'       => 'remove',
             'packages'      => array($name),
             '--working-dir' => $workingDir,
+            '--update-with-dependencies' => true,
         ));
         $input->setInteractive(false);
 

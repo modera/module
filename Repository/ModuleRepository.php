@@ -117,6 +117,15 @@ class ModuleRepository
     }
 
     /**
+     * @param $name
+     * @return null|bool
+     */
+    public function isInstalledAsDependency($name)
+    {
+        return ComposerService::isInstalledAsDependency($this->getComposer(), $name);
+    }
+
+    /**
      * @return CompletePackage[]
      */
     public function getInstalled()
