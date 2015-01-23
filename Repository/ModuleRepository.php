@@ -4,9 +4,11 @@ namespace Modera\Module\Repository;
 
 use Packagist\Api\Client;
 use Packagist\Api\Result\Package;
+use Packagist\Api\Result\Package\Version;
 use Composer\Composer;
 use Composer\Package\CompletePackage;
 use Composer\Package\PackageInterface;
+use Composer\Package\Version\VersionParser;
 use Modera\Module\Adapter\ComposerAdapter;
 use Modera\Module\Service\ComposerService;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -103,6 +105,23 @@ class ModuleRepository
     public function formatVersion(PackageInterface $package)
     {
         return ComposerService::formatPackageVersion($package);
+    }
+
+    /**
+     * @param Version $package
+     * @return string
+     */
+    public function getVersionAlias(Version $package)
+    {
+        $extra = $package->getExtra();
+
+        if (isset($extra['branch-alias'][$package->getVersion()])) {
+            $parser = new VersionParser;
+            $version = $parser->normalizeBranch(str_replace('-dev', '', $extra['branch-alias'][$package->getVersion()]));
+            return preg_replace('{(\.9{7})+}', '.x', $version);
+        }
+
+        return '';
     }
 
     /**

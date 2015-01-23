@@ -12,7 +12,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Modera\Module\Repository\ModuleRepository;
 use Modera\Module\Client as ModuleClient;
 
 /**
@@ -87,19 +86,28 @@ class ClientCommand extends Command
             }
 
             if (in_array($path, array('/call', '/status', '/update-status'))) {
+                $response->writeHead(200, array('Content-Type' => 'application/json'));
                 $params = $request->getQuery();
-                switch ($path) {
-                    case '/call':
-                        $headers = $request->getHeaders();
-                        $url  = 'http://' . $headers['Host'] . ':' . $input->getOption('listen-port');
-                        $resp = $client->callMethod($params, $url . '/update-status');
-                        break;
-                    case '/status':
-                        $resp = $client->getStatus($params);
-                        break;
-                    case '/update-status':
-                        $resp = $client->updateStatus($params);
-                        break;
+
+                try {
+                    switch ($path) {
+                        case '/call':
+                            $headers = $request->getHeaders();
+                            $url  = 'http://' . $headers['Host'] . ':' . $input->getOption('listen-port');
+                            $resp = $client->callMethod($params, $url . '/update-status');
+                            break;
+                        case '/status':
+                            $resp = $client->getStatus($params);
+                            break;
+                        case '/update-status':
+                            $resp = $client->updateStatus($params);
+                            break;
+                    }
+                } catch (\Exception $e) {
+                    $resp = array(
+                        'success' => false,
+                        'msg'     => $e->getMessage()
+                    );
                 }
 
                 $resp = json_encode($resp);
@@ -107,18 +115,35 @@ class ClientCommand extends Command
                     $resp = $params['callback'] . '(' . $resp . ')';
                 }
 
-                $response->writeHead(200, array('Content-Type' => 'application/json'));
                 $response->end($resp);
 
             } else if ($input->getOption('ui')) {
-                $response->writeHead(200, array('Content-Type' => 'text/html'));
-                try {
-                    $response->end($this->getTwigEnv()->render('index.html.twig', array(
-                        'repo'       => new ModuleRepository($workingDir),
-                        'pathPrefix' => $pathPrefix ?: '',
-                    )));
-                } catch (\Exception $e) {
-                    $response->end($e->getMessage());
+                if ('/api' == $path) {
+                    $response->writeHead(200, array('Content-Type' => 'application/json'));
+                    $params = $request->getQuery();
+
+                    try {
+                        $resp = $client->apiMethod($params);
+                    } catch (\Exception $e) {
+                        $resp = array(
+                            'success' => false,
+                            'msg'     => $e->getMessage()
+                        );
+                    }
+
+                    $response->end(json_encode($resp));
+
+                } else {
+                    $response->writeHead(200, array('Content-Type' => 'text/html'));
+                    try {
+                        $resp = $this->getTwigEnv()->render('index.html.twig', array(
+                            'pathPrefix' => $pathPrefix ?: '',
+                        ));
+                    } catch (\Exception $e) {
+                        $resp = $e->getMessage();
+                    }
+
+                    $response->end($resp);
                 }
 
             } else {

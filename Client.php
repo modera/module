@@ -35,6 +35,67 @@ class Client
     }
 
     /**
+     * @param $params
+     * @return array
+     */
+    public function apiMethod($params)
+    {
+        $response = array(
+            'success' => false,
+            'msg'     => 'Error',
+        );
+
+        $action = isset($params['action']) ? $params['action'] : '';
+        switch ($action) {
+            case 'list':
+
+                $moduleRepository = new ModuleRepository($this->workingDir);
+
+                $data = $moduleRepository->getAvailable();
+                $filter = isset($params['filter']) ? $params['filter'] : null;
+                if ($filter) {
+                    $data = array_filter($data, function ($name) use ($filter) {
+                        return stripos($name, $filter) !== false;
+                    });
+                }
+                $total = count($data);
+
+                $result = array();
+                if ($total) {
+                    $limit = isset($params['limit']) ? $params['limit'] : 5;
+                    $page = isset($params['page']) ? $params['page'] : 1;
+                    $offset = ($limit * $page) - $limit;
+
+                    foreach (array_slice($data, $offset, $limit) as $name) {
+                        $info = $this->getPackageInfo($name);
+                        if ($info) {
+                            $result[$info['name']] = $info;
+                        }
+                    }
+                }
+
+                $response = array(
+                    'success' => true,
+                    'data'    => $result,
+                    'total'   => $total,
+                );
+
+                break;
+
+            case 'info':
+
+                $response = array(
+                    'success' => true,
+                    'data'    => $this->getPackageInfo($params['name']),
+                );
+
+                break;
+        }
+
+        return $response;
+    }
+
+    /**
      * @param array $params
      * @param string $outputUrl
      * @return array
@@ -48,43 +109,34 @@ class Client
             'msg'     => 'Error'
         );
 
-        if ('is-dependency' == $params['method']) {
-            $moduleRepository = new ModuleRepository($this->workingDir);
-            $response = array(
-                'success'       => true,
-                'is_dependency' => $moduleRepository->isInstalledAsDependency($params['name']),
-            );
+        if ($this->output['working']) {
+            $response['msg'] = 'The "' . $this->output['params']['method'] . '" method is already running!';
 
-        } else {
-            if ($this->output['working']) {
-                $response['msg'] = 'The "' . $this->output['params']['method'] . '" method is already running!';
+        } else if (in_array($params['method'], array('require', 'remove'))) {
 
-            } else if (in_array($params['method'], array('require', 'remove'))) {
+            $this->output['backspace'] = false;
+            $this->output['success']   = false;
+            $this->output['working']   = true;
+            $this->output['params']    = $params;
+            $this->output['msg']       = '';
 
-                $this->output['backspace'] = false;
-                $this->output['success']   = false;
-                $this->output['working']   = true;
-                $this->output['params']    = $params;
-                $this->output['msg']       = '';
+            $response['success'] = true;
+            $response['msg'] = ucfirst($params['method']) . ': ' . $params['name'];
 
-                $response['success'] = true;
-                $response['msg'] = ucfirst($params['method']) . ': ' . $params['name'];
-
-                if ('require' == $params['method']) {
-                    $response['msg'] .= ':' . $params['version'];
-                }
-                echo $response['msg'] . "\n";
+            if ('require' == $params['method']) {
+                $response['msg'] .= ':' . $params['version'];
             }
+            echo $response['msg'] . "\n";
+        }
 
-            if (true === $response['success']) {
-                $command = implode(' ', array(
-                    $this->createCommand($params),
-                    '--working-dir=' . $this->workingDir,
-                    '--output-url=' . $outputUrl
-                ));
-                $outputFile = '/dev/null';
-                $response['pid'] = shell_exec(sprintf('%s > %s 2>&1 & echo $!', $command, $outputFile));
-            }
+        if (true === $response['success']) {
+            $command = implode(' ', array(
+                $this->createCommand($params),
+                '--working-dir=' . $this->workingDir,
+                '--output-url=' . $outputUrl
+            ));
+            $outputFile = '/dev/null';
+            $response['pid'] = shell_exec(sprintf('%s > %s 2>&1 & echo $!', $command, $outputFile));
         }
 
         return $response;
@@ -183,5 +235,68 @@ class Client
         }
 
         return $command . ' --method=' . $params['method'];
+    }
+
+    /**
+     * @param $name
+     * @return array|null
+     */
+    private function getPackageInfo($name)
+    {
+        $moduleRepository = new ModuleRepository($this->workingDir);
+
+        $package = $moduleRepository->getPackage($name);
+        if (!$package) {
+            return null;
+        }
+
+        $result = array(
+            'name'        => $package->getName(),
+            'description' => $package->getDescription(),
+            'installed'   => null,
+            'versions'    => array(),
+        );
+
+        $installed = $moduleRepository->getInstalledByName($package->getName());
+        if ($installed) {
+
+            $branchAlias = '';
+            $version = $installed->getPrettyVersion();
+            if ($installed instanceof \Composer\Package\AliasPackage) {
+                $branchAlias = $version;
+                $version = $installed->getAliasOf()->getPrettyVersion();
+            }
+
+            $require = array();
+            foreach ($installed->getRequires() as $link) {
+                /* @var \Composer\Package\Link $link */
+                $require[$link->getTarget()] = $link->getConstraint()->getPrettyString();
+            }
+
+            $result['installed'] = array(
+                'version'      => $version,
+                'branchAlias'  => $branchAlias,
+                'reference'    => $installed->getSourceReference(),
+                'isDependency' => $moduleRepository->isInstalledAsDependency($installed->getName()),
+                'require'      => $require,
+            );
+        }
+
+        $versions = $package->getVersions();
+        foreach($versions as $p) {
+            /* @var \Packagist\Api\Result\Package\Version $p */
+            $createdAt = new \DateTime($p->getTime());
+
+            $version = $p->getVersion();
+            $result['versions'][$version] = array(
+                'version'     => $version,
+                'branchAlias' => $moduleRepository->getVersionAlias($p),
+                'reference'   => $p->getSource()->getReference(),
+                'createdAt'   => $createdAt->format(\DateTime::RFC1123),
+                'require'     => $p->getRequire(),
+            );
+        }
+
+        return $result;
     }
 }
