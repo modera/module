@@ -3,6 +3,7 @@
 namespace Modera\Module\Service;
 
 use Composer\Composer;
+use Composer\Json\JsonFile;
 use Composer\Package\CompletePackage;
 use Composer\Package\PackageInterface;
 use Composer\Package\Version\VersionParser;
@@ -35,6 +36,50 @@ class ComposerService
     }
 
     /**
+     * @param array $extra
+     * @param string $packageDir
+     * @return array
+     */
+    protected static function combineRegisterBundles(array $extra, $packageDir)
+    {
+        $bundles = array();
+        if (isset($extra['modera-module'])) {
+            if (isset($extra['modera-module']['register-bundle'])) {
+                if (is_array($extra['modera-module']['register-bundle'])) {
+                    $bundles = array_merge($bundles, $extra['modera-module']['register-bundle']);
+                } else {
+                    $bundles[] = $extra['modera-module']['register-bundle'];
+                }
+            }
+
+            if (isset($extra['modera-module']['include'])) {
+                $patterns = array();
+                foreach ($extra['modera-module']['include'] as $path) {
+                    $patterns[] = $packageDir . DIRECTORY_SEPARATOR . $path;
+                }
+
+                $files = array_map(
+                    function ($files, $pattern) {
+                        return $files;
+                    },
+                    array_map('glob', $patterns),
+                    $patterns
+                );
+
+                foreach (array_reduce($files, 'array_merge', array()) as $path) {
+                    $file = new JsonFile($path);
+                    $json = $file->read();
+                    if (isset($json['extra'])) {
+                        $bundles = array_merge($bundles, static::combineRegisterBundles($json['extra'], dirname($path)));
+                    }
+                }
+            }
+        }
+
+        return $bundles;
+    }
+
+    /**
      * @param Composer $composer
      * @param string|null $type
      * @return array
@@ -42,12 +87,17 @@ class ComposerService
     public static function getRegisterBundles(Composer $composer, $type = null)
     {
         $bundles = array();
+        $vendorDir = $composer->getConfig()->get('vendor-dir');
         $packages = static::getInstalledPackages($composer, $type);
+
         foreach ($packages as $package) {
-            $extra = $package->getExtra();
-            if (isset($extra['modera-module']) && isset($extra['modera-module']['register-bundle'])) {
-                $bundles[] = $extra['modera-module']['register-bundle'];
-            }
+            $bundles = array_merge(
+                $bundles,
+                static::combineRegisterBundles(
+                    $package->getExtra(),
+                    $vendorDir . DIRECTORY_SEPARATOR . $package->getName()
+                )
+            );
         }
 
         return $bundles;
