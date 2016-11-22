@@ -37,24 +37,25 @@ class ComposerService
 
     /**
      * @param array $extra
+     * @param string $type
      * @param string $packageDir
      * @return array
      */
-    protected static function combineRegisterBundles(array $extra, $packageDir)
+    protected static function combineRegisterBundles(array $extra, $type, $packageDir)
     {
         $bundles = array();
-        if (isset($extra['modera-module'])) {
-            if (isset($extra['modera-module']['register-bundle'])) {
-                if (is_array($extra['modera-module']['register-bundle'])) {
-                    $bundles = array_merge($bundles, $extra['modera-module']['register-bundle']);
+        if (isset($extra[$type])) {
+            if (isset($extra[$type]['register-bundle'])) {
+                if (is_array($extra[$type]['register-bundle'])) {
+                    $bundles = array_merge($bundles, $extra[$type]['register-bundle']);
                 } else {
-                    $bundles[] = $extra['modera-module']['register-bundle'];
+                    $bundles[] = $extra[$type]['register-bundle'];
                 }
             }
 
-            if (isset($extra['modera-module']['include'])) {
+            if (isset($extra[$type]['include'])) {
                 $patterns = array();
-                foreach ($extra['modera-module']['include'] as $path) {
+                foreach ($extra[$type]['include'] as $path) {
                     $patterns[] = $packageDir . DIRECTORY_SEPARATOR . $path;
                 }
 
@@ -70,7 +71,7 @@ class ComposerService
                     $file = new JsonFile($path);
                     $json = $file->read();
                     if (isset($json['extra'])) {
-                        $bundles = array_merge($bundles, static::combineRegisterBundles($json['extra'], dirname($path)));
+                        $bundles = array_merge($bundles, static::combineRegisterBundles($json['extra'], $type, dirname($path)));
                     }
                 }
             }
@@ -89,13 +90,13 @@ class ComposerService
         $bundles = array();
         $vendorDir = $composer->getConfig()->get('vendor-dir');
         $packages = static::getInstalledPackages($composer, $type);
+        $options = static::getOptions($composer);
 
         foreach ($packages as $package) {
             $bundles = array_merge(
                 $bundles,
                 static::combineRegisterBundles(
-                    $package->getExtra(),
-                    $vendorDir . DIRECTORY_SEPARATOR . $package->getName()
+                    $package->getExtra(), $options['type'], $vendorDir . DIRECTORY_SEPARATOR . $package->getName()
                 )
             );
         }
