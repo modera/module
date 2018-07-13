@@ -15,8 +15,7 @@
         "react/http": "0.3.*",
         "twig/twig": "^1.0||^2.0",
         "symfony/console": "^2.2|^3.0",
-        "knplabs/packagist-api": "~1.1",
-        "guzzle/guzzle": "*"
+        "knplabs/packagist-api": "~1.1"
     },
     "autoload": {
         "psr-0" : {
